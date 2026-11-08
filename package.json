@@ -1,0 +1,26 @@
+{
+  "name": "finals-core",
+  "version": "1.0.0",
+  "description": "Ladder, rankings and team builder for THE FINALS mini tournaments.",
+  "type": "module",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "default": "./src/index.js" },
+    "./ladder": { "types": "./src/ladder.d.ts", "default": "./src/ladder.js" },
+    "./rankings": { "types": "./src/rankings.d.ts", "default": "./src/rankings.js" },
+    "./teambuilder": { "types": "./src/teambuilder.d.ts", "default": "./src/teambuilder.js" }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glyzer/finals-core.git"
+  }
+}

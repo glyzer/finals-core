@@ -1,0 +1,108 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 1.1.0 (no v)"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Require main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Releases run only from main (got $GITHUB_REF)"; exit 1
+          fi
+      - name: Validate version format
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must match X.Y.Z (got '$VERSION')"; exit 1
+          fi
+      - uses: actions/checkout@v4
+      - name: Check package.json version
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          if [ "$pkg" != "$VERSION" ]; then
+            echo "::error::package.json version is $pkg, input is $VERSION; bump it in a PR first"; exit 1
+          fi
+      - name: Check tag does not exist
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::Tag v$VERSION already exists"; exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npm test
+      - run: npm pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate
+          path: finals-core-${{ inputs.version }}.tgz
+          if-no-files-found: error
+
+  tourney-tests:
+    needs: core-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: c22dragoon/thefinals_mini_tourney
+          ref: main
+          path: tourney
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install tourney
+        working-directory: tourney
+        run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate
+          path: .
+      - name: Install candidate
+        working-directory: tourney
+        run: npm install --no-save "../finals-core-$VERSION.tgz"
+      - name: Import check
+        working-directory: tourney
+        run: node -e "import('finals-core').then(()=>console.log('ok'))"
+      - name: Tourney tests
+        working-directory: tourney
+        run: npm test
+
+  tag:
+    needs: [core-tests, tourney-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag
+        run: |
+          git tag "v$VERSION" "$GITHUB_SHA"
+          git push origin "v$VERSION"
+      - name: Release
+        run: gh release create "v$VERSION" --generate-notes

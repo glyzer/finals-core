@@ -32,4 +32,14 @@ const winner = champion(matches);                        // team id or null
 
 ## Develop
 
-`npm test` (Node's built-in test runner). Release: bump `version` in package.json, tag `vX.Y.Z`, push the tag.
+`npm test` (Node's built-in test runner).
+
+## Releasing
+
+Releases are cut only by the manual `release` workflow; never tag by hand.
+
+1. Bump `version` in `package.json` in a normal PR and merge it to `main`.
+2. Run the workflow from `main` with that version (no `v`): `gh workflow run release.yml -f version=X.Y.Z`.
+3. It runs finals-core's tests, packs the candidate, runs the full thefinals_mini_tourney suite on its `main` against it, and only then tags `vX.Y.Z` and creates a GitHub release.
+
+Tourney picks up the release through its own bump PR to the new tag.

@@ -1,6 +1,6 @@
 {
   "name": "finals-core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ladder, rankings and team builder for THE FINALS mini tournaments.",
   "type": "module",
   "license": "ISC",

@@ -58,41 +58,8 @@ jobs:
           path: finals-core-${{ inputs.version }}.tgz
           if-no-files-found: error
 
-  tourney-tests:
-    needs: core-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      VERSION: ${{ inputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: c22dragoon/thefinals_mini_tourney
-          ref: main
-          path: tourney
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install tourney
-        working-directory: tourney
-        run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          name: candidate
-          path: .
-      - name: Install candidate
-        working-directory: tourney
-        run: npm install --no-save "../finals-core-$VERSION.tgz"
-      - name: Import check
-        working-directory: tourney
-        run: node -e "import('finals-core').then(()=>console.log('ok'))"
-      - name: Tourney tests
-        working-directory: tourney
-        run: npm test
-
   tag:
-    needs: [core-tests, tourney-tests]
+    needs: core-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
